@@ -3,7 +3,7 @@
 // See "LICENSE" for license details
 
 #ifndef BUILD_INFORMATION
-#define BUILD_INFORMATION "taiishal v5"
+#define BUILD_INFORMATION "taiishal v6"
 #endif
 
 
@@ -354,38 +354,43 @@ const cRGB mapColors[4] = {
 
 static const byte T = 255;
 
-// Better to keep this data in PROGMEM for more layers.
-static const byte gameColors [rows][cols] {
+static const byte functionColors [rows][cols] PROGMEM {
+  {T,1,1,1,1,1,1,   T,T,   T,1,1,1,1,1,1},
+  {T,T,2,T,3,T,T,   T,T,   T,T,T,T,T,T,1},
+  {T,2,2,2,3,T,T,   T,T,   T,T,2,2,2,2,T},
+  {T,T,T,T,3,T,  T, T,T, T,  T,T,T,T,T,T}
+};
+
+static const byte gameColors [rows][cols] PROGMEM {
   {T,T,T,T,T,T,T,   T,T,   T,T,T,T,T,T,T},
   {T,T,3,T,T,T,T,   1,1,   T,T,T,T,T,T,T},
   {T,3,3,3,T,T,T,   T,T,   T,T,T,T,T,2,T},
   {T,T,T,T,T,T,  T, T,T, T,  T,T,T,2,2,2}
 };
 
-class FunctionLayerColor_ : public kaleidoscope::Plugin {
-public:
-  FunctionLayerColor_() {}
+class LayerColor : public kaleidoscope::Plugin {
+private:
+  const byte (*colorMap)[cols];
+  byte colorLayer;
 
-  kaleidoscope::EventHandlerResult afterEachCycle() {
-    if (Layer.top() == FUNCTION) {
-      LEDControl.setCrgbAt(KeyAddr(0, 0), CRGB(255, 0, 0));
-    }
-    return kaleidoscope::EventHandlerResult::OK;
+public:
+  LayerColor(const byte (*colorMap)[cols], byte colorLayer) {
+    this->colorMap = colorMap;
+    this->colorLayer = colorLayer;
   }
-};
 
-class GameLayerColor_ : public kaleidoscope::Plugin {
-public:
-  GameLayerColor_() {}
+  void setLayer(byte colorLayer) {
+    this->colorLayer = colorLayer;
+  }
 
   kaleidoscope::EventHandlerResult afterEachCycle() {
-    if (Layer.top() == GAME) {
+    if (Layer.top() == colorLayer) {
       LEDRainbowWaveEffect.brightness(85);
       LEDRainbowEffect.brightness(85);
       
       for (byte x = 0; x < rows; x++) {
         for (byte y = 0; y < cols; y++) {
-          byte mapColor = gameColors[x][y];
+          byte mapColor = pgm_read_byte(&colorMap[x][y]);
           if (mapColor == T) continue;
           LEDControl.setCrgbAt(KeyAddr(x, y), mapColors[mapColor]);
           if (mapColor == 0) LEDControl.refreshAt(KeyAddr(x, y));
@@ -393,15 +398,17 @@ public:
       }
 
     } else {
-      LEDRainbowWaveEffect.brightness(rainbowBrightness);
-      LEDRainbowEffect.brightness(rainbowBrightness);
+      if (Layer.top() == PRIMARY) {
+        LEDRainbowWaveEffect.brightness(rainbowBrightness);
+        LEDRainbowEffect.brightness(rainbowBrightness);
+      }
     }
     return kaleidoscope::EventHandlerResult::OK;
   }
 };
 
-FunctionLayerColor_ FunctionLayerColor;
-GameLayerColor_ GameLayerColor;
+LayerColor FunctionLayerColor(functionColors, FUNCTION);
+LayerColor GameLayerColor(gameColors, GAME);
 
 
 // First, tell Kaleidoscope which plugins you want to use.
@@ -525,7 +532,7 @@ void setup() {
   MouseKeys.speed = 15;
   MouseKeys.accelDelay = 100;
 
-  // Set LEDBreath color;
+  // Set LEDBreath color.
   LEDBreatheEffect.hue = 140;
   LEDBreatheEffect.saturation = 150;
 
