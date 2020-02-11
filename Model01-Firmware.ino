@@ -3,7 +3,7 @@
 // See "LICENSE" for license details
 
 #ifndef BUILD_INFORMATION
-#define BUILD_INFORMATION "locally built"
+#define BUILD_INFORMATION "taiishal v5"
 #endif
 
 
@@ -192,7 +192,7 @@ KEYMAPS(
    Key_Tab,  Key_mouseScrollUp, Key_mouseUp, Key_mouseScrollDn, Key_mouseBtnR, Key_mouseWarpEnd, Key_mouseWarpNE,
    Key_Home, Key_mouseL,       Key_mouseDn, Key_mouseR, Key_mouseBtnL, Key_mouseWarpNW,
    Key_End,  Key_PrintScreen,  Key_Insert,  ___,        Key_mouseBtnM, Key_mouseWarpSW,  Key_mouseWarpSE,
-   ___, Key_Delete, ___, ___,
+   ___, Key_Delete, Key_LeftAlt, ___,
    ___,
 
    Consumer_ScanPreviousTrack, Key_F6,                 Key_F7,                   Key_F8,                   Key_F9,          Key_F10,          Key_F11,
@@ -213,7 +213,7 @@ KEYMAPS(
 
 static void versionInfoMacro(uint8_t keyState) {
   if (keyToggledOn(keyState)) {
-    Macros.type(PSTR("Keyboardio Model 01 - Kaleidoscope "));
+    Macros.type(PSTR("Keyboardio Model 01 - Kaleidoscope build: "));
     Macros.type(PSTR(BUILD_INFORMATION));
   }
 }
@@ -335,6 +335,32 @@ USE_MAGIC_COMBOS({.action = toggleKeyboardProtocol,
   .keys = { R3C6, R0C0, R0C6 }
 });
 
+// Layer Coloring
+
+// Shorthand for Rows/Cols.
+static const byte rows = Kaleidoscope.device().matrix_rows;
+static const byte cols = Kaleidoscope.device().matrix_columns;
+
+// Default rainbow LED effects brightness (out of 255):
+static const byte rainbowBrightness = 150;
+
+// https://community.keyboard.io/t/turning-on-specific-leds-when-hitting-a-specific-layer/703/31
+const cRGB mapColors[4] = {
+  CRGB(0, 0, 0),   // Off
+  CRGB(255, 0, 0), // Red
+  CRGB(0, 255, 0), // Green
+  CRGB(0, 0, 255)  // Blue
+};
+
+static const byte T = 255;
+
+// Better to keep this data in PROGMEM for more layers.
+static const byte gameColors [rows][cols] {
+  {T,T,T,T,T,T,T,   T,T,   T,T,T,T,T,T,T},
+  {T,T,3,T,T,T,T,   1,1,   T,T,T,T,T,T,T},
+  {T,3,3,3,T,T,T,   T,T,   T,T,T,T,T,2,T},
+  {T,T,T,T,T,T,  T, T,T, T,  T,T,T,2,2,2}
+};
 
 class FunctionLayerColor_ : public kaleidoscope::Plugin {
 public:
@@ -354,7 +380,21 @@ public:
 
   kaleidoscope::EventHandlerResult afterEachCycle() {
     if (Layer.top() == GAME) {
-      LEDControl.setCrgbAt(KeyAddr(0, 0), CRGB(0, 0, 255));
+      LEDRainbowWaveEffect.brightness(85);
+      LEDRainbowEffect.brightness(85);
+      
+      for (byte x = 0; x < rows; x++) {
+        for (byte y = 0; y < cols; y++) {
+          byte mapColor = gameColors[x][y];
+          if (mapColor == T) continue;
+          LEDControl.setCrgbAt(KeyAddr(x, y), mapColors[mapColor]);
+          if (mapColor == 0) LEDControl.refreshAt(KeyAddr(x, y));
+        }
+      }
+
+    } else {
+      LEDRainbowWaveEffect.brightness(rainbowBrightness);
+      LEDRainbowEffect.brightness(rainbowBrightness);
     }
     return kaleidoscope::EventHandlerResult::OK;
   }
@@ -462,8 +502,8 @@ void setup() {
 
   // We set the brightness of the rainbow effects to 150 (on a scale of 0-255)
   // This draws more than 500mA, but looks much nicer than a dimmer effect
-  LEDRainbowEffect.brightness(150);
-  LEDRainbowWaveEffect.brightness(150);
+  LEDRainbowEffect.brightness(rainbowBrightness);
+  LEDRainbowWaveEffect.brightness(rainbowBrightness);
 
   // Set the action key the test mode should listen for to Left Fn
   HardwareTestMode.setActionKey(R3C6);
