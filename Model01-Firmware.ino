@@ -485,9 +485,12 @@ void setup() {
   MouseKeys.speed = 15;
   MouseKeys.accelDelay = 100;
 
+  // Set LEDBreath color;
+  LEDBreatheEffect.hue = 140;
+  LEDBreatheEffect.saturation = 150;
+
   // Default to LED effect on startup... not using a low-power device.
   LEDRainbowWaveEffect.activate();
-
 }
 
 /** loop is the second of the standard Arduino sketch functions.
