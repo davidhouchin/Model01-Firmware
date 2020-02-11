@@ -356,8 +356,8 @@ static const byte T = 255;
 
 static const byte functionColors [rows][cols] PROGMEM {
   {T,1,1,1,1,1,1,   T,T,   T,1,1,1,1,1,1},
-  {T,T,2,T,3,T,T,   T,T,   T,T,T,T,T,T,1},
-  {T,2,2,2,3,T,T,   T,T,   T,T,2,2,2,2,T},
+  {T,T,2,T,3,T,T,   1,1,   T,T,T,T,T,T,1},
+  {T,2,2,2,3,T,T,   T,T,   T,2,2,2,2,T,T},
   {T,T,T,T,3,T,  T, T,T, T,  T,T,T,T,T,T}
 };
 
