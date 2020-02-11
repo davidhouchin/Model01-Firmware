@@ -546,11 +546,6 @@ void setup() {
   // https://github.com/keyboardio/Kaleidoscope/blob/master/docs/plugins/LED-Stalker.md
   StalkerEffect.variant = STALKER(BlazingTrail);
 
-  // We want to make sure that the firmware starts with LED effects off
-  // This avoids over-taxing devices that don't have a lot of power to share
-  // with USB devices
-  LEDOff.activate();
-
   // To make the keymap editable without flashing new firmware, we store
   // additional layers in EEPROM. For now, we reserve space for five layers. If
   // one wants to use these layers, just set the default layer to one in EEPROM,
@@ -562,6 +557,15 @@ void setup() {
   // maps for. To make things simple, we set it to five layers, which is how
   // many editable layers we have (see above).
   ColormapEffect.max_layers(5);
+
+  // MouseKey settings for sanity.
+  MouseKeys.setSpeedLimit(70);
+  MouseKeys.speed = 15;
+  MouseKeys.accelDelay = 100;
+
+  // Default to LED effect on startup... not using a low-power device.
+  LEDRainbowWaveEffect.activate();
+
 }
 
 /** loop is the second of the standard Arduino sketch functions.
