@@ -63,6 +63,7 @@
 // Support for USB quirks, like changing the key state report protocol
 #include "Kaleidoscope-USB-Quirks.h"
 
+
 /** This 'enum' is a list of all the macros used by the Model 01's firmware
   * The names aren't particularly important. What is important is that each
   * is unique.
@@ -334,6 +335,35 @@ USE_MAGIC_COMBOS({.action = toggleKeyboardProtocol,
   .keys = { R3C6, R0C0, R0C6 }
 });
 
+
+class FunctionLayerColor_ : public kaleidoscope::Plugin {
+public:
+  FunctionLayerColor_() {}
+
+  kaleidoscope::EventHandlerResult afterEachCycle() {
+    if (Layer.top() == FUNCTION) {
+      LEDControl.setCrgbAt(KeyAddr(0, 0), CRGB(255, 0, 0));
+    }
+    return kaleidoscope::EventHandlerResult::OK;
+  }
+};
+
+class GameLayerColor_ : public kaleidoscope::Plugin {
+public:
+  GameLayerColor_() {}
+
+  kaleidoscope::EventHandlerResult afterEachCycle() {
+    if (Layer.top() == GAME) {
+      LEDControl.setCrgbAt(KeyAddr(0, 0), CRGB(0, 0, 255));
+    }
+    return kaleidoscope::EventHandlerResult::OK;
+  }
+};
+
+FunctionLayerColor_ FunctionLayerColor;
+GameLayerColor_ GameLayerColor;
+
+
 // First, tell Kaleidoscope which plugins you want to use.
 // The order can be important. For example, LED effects are
 // added in the order they're listed here.
@@ -411,7 +441,11 @@ KALEIDOSCOPE_INIT_PLUGINS(
   // comfortable - or able - to do automatically, but can be useful
   // nevertheless. Such as toggling the key report protocol between Boot (used
   // by BIOSes) and Report (NKRO).
-  USBQuirks
+  USBQuirks,
+
+  // Override colors for certain layers.
+  FunctionLayerColor,
+  GameLayerColor
 );
 
 /** The 'setup' function is one of the two standard Arduino sketch functions.
