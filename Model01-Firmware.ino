@@ -130,7 +130,7 @@ enum { MACRO_VERSION_INFO,
   *
   */
 
-enum { PRIMARY, NUMPAD, FUNCTION }; // layers
+enum { PRIMARY, NUMPAD, GAME, FUNCTION }; // layers
 
 
 /* This comment temporarily turns off astyle's indent enforcement
@@ -148,7 +148,7 @@ KEYMAPS(
    Key_LeftControl, Key_Backspace, Key_LeftGui, Key_LeftShift,
    ShiftToLayer(FUNCTION),
 
-   M(MACRO_ANY),  Key_6, Key_7, Key_8,     Key_9,         Key_0,         LockLayer(NUMPAD),
+   LockLayer(GAME),  Key_6, Key_7, Key_8,     Key_9,         Key_0,         LockLayer(NUMPAD),
    Key_Enter,     Key_Y, Key_U, Key_I,     Key_O,         Key_P,         Key_Equals,
                   Key_H, Key_J, Key_K,     Key_L,         Key_Semicolon, Key_Quote,
    Key_RightAlt,  Key_N, Key_M, Key_Comma, Key_Period,    Key_Slash,     Key_Minus,
@@ -171,6 +171,20 @@ KEYMAPS(
    ___, ___, ___, ___,
    ___),
 
+  [GAME] =  KEYMAP_STACKED
+  (___, ___, ___, ___, ___, ___, ___,
+   ___, ___, ___, ___, ___, ___, ___,
+   ___, ___, ___, ___, ___, ___,
+   Key_LeftShift, ___, ___, ___, ___, ___, ___,
+   Key_LeftAlt, Key_Spacebar, Key_Delete, ___,
+   ___,
+
+   ___, ___, ___, ___, ___, ___, ___,
+   ___, ___, ___, ___, ___, ___, ___,
+        ___, ___, ___, ___, Key_UpArrow, ___,
+   ___, ___, ___, ___, Key_LeftArrow, Key_DownArrow, Key_RightArrow,
+   ___, ___, Key_Backspace, ___,
+   ___),
 
   [FUNCTION] =  KEYMAP_STACKED
   (___,      Key_F1,           Key_F2,      Key_F3,     Key_F4,        Key_F5,           Key_CapsLock,
