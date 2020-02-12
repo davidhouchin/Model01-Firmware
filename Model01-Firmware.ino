@@ -3,7 +3,7 @@
 // See "LICENSE" for license details
 
 #ifndef BUILD_INFORMATION
-#define BUILD_INFORMATION "taiishal v6"
+#define BUILD_INFORMATION "taiishal v7"
 #endif
 
 
@@ -63,6 +63,10 @@
 // Support for USB quirks, like changing the key state report protocol
 #include "Kaleidoscope-USB-Quirks.h"
 
+// Custom includes
+#include "Kaleidoscope-LEDEffects.h"
+#include "Kaleidoscope-LED-Wavepool.h"
+#include "Kaleidoscope-LED-Fire.h"
 
 /** This 'enum' is a list of all the macros used by the Model 01's firmware
   * The names aren't particularly important. What is important is that each
@@ -206,6 +210,16 @@ KEYMAPS(
 /* Re-enable astyle's indent enforcement */
 // *INDENT-ON*
 
+// Settings
+static uint16_t settingsAddr;
+static struct {
+  byte lastEffect;
+} Settings;
+
+// Savable LED effects. FX_NUM should contain the total number of effects.
+enum { FX_OFF, FX_RAINBOW, FX_RAINBOWWAVE, FX_BREATHE, FX_MIAMI, FX_FIRE, FX_WAVEPOOL, FX_NUM = 7 };
+
+
 /** versionInfoMacro handles the 'firmware version info' macro
  *  When a key bound to the macro is pressed, this macro
  *  prints out the firmware build information as virtual keystrokes
@@ -322,6 +336,14 @@ static void enterHardwareTestMode(uint8_t combo_index) {
   HardwareTestMode.runTests();
 }
 
+static void saveLastEffect(uint8_t combo_index) {
+  Settings.lastEffect++;
+  if (Settings.lastEffect == FX_NUM) {
+    Settings.lastEffect = 0;
+  }
+  EEPROM.put(settingsAddr, Settings);
+}
+
 
 /** Magic combo list, a list of key combo and action pairs the firmware should
  * recognise.
@@ -333,7 +355,10 @@ USE_MAGIC_COMBOS({.action = toggleKeyboardProtocol,
   .action = enterHardwareTestMode,
   // Left Fn + Prog + LED
   .keys = { R3C6, R0C0, R0C6 }
-});
+}, {
+  .action = saveLastEffect,
+  .keys = { R0C6 }
+} );
 
 // Layer Coloring
 
@@ -341,8 +366,9 @@ USE_MAGIC_COMBOS({.action = toggleKeyboardProtocol,
 static const byte rows = Kaleidoscope.device().matrix_rows;
 static const byte cols = Kaleidoscope.device().matrix_columns;
 
-// Default rainbow LED effects brightness (out of 255):
+// Default and dimmed rainbow LED effects brightness (out of 255):
 static const byte rainbowBrightness = 150;
+static const byte rainbowBrightnessDimmed = 85;
 
 // https://community.keyboard.io/t/turning-on-specific-leds-when-hitting-a-specific-layer/703/31
 const cRGB mapColors[4] = {
@@ -355,7 +381,7 @@ const cRGB mapColors[4] = {
 static const byte T = 255;
 
 static const byte functionColors [rows][cols] PROGMEM {
-  {T,1,1,1,1,1,1,   T,T,   T,1,1,1,1,1,1},
+  {T,1,1,1,1,1,T,   T,T,   T,1,1,1,1,1,1},
   {T,T,2,T,3,T,T,   1,1,   T,T,T,T,T,T,1},
   {T,2,2,2,3,T,T,   T,T,   T,2,2,2,2,T,T},
   {T,T,T,T,3,T,  T, T,T, T,  T,T,T,T,T,T}
@@ -385,8 +411,8 @@ public:
 
   kaleidoscope::EventHandlerResult afterEachCycle() {
     if (Layer.top() == colorLayer) {
-      LEDRainbowWaveEffect.brightness(85);
-      LEDRainbowEffect.brightness(85);
+      LEDRainbowWaveEffect.brightness(rainbowBrightnessDimmed);
+      LEDRainbowEffect.brightness(rainbowBrightnessDimmed);
       
       for (byte x = 0; x < rows; x++) {
         for (byte y = 0; y < cols; y++) {
@@ -458,6 +484,11 @@ KALEIDOSCOPE_INIT_PLUGINS(
   // The breathe effect slowly pulses all of the LEDs on your keyboard
   LEDBreatheEffect,
 
+  // More effects (Warning - JukeboxEffect caused my keyboard's LEDs to jitter and become unresponsive!)
+  MiamiEffect,
+  FireEffect,
+  WavepoolEffect,
+
   // The LED Palette Theme plugin provides a shared palette for other plugins,
   // like Colormap below
   LEDPaletteTheme,
@@ -527,6 +558,11 @@ void setup() {
   // many editable layers we have (see above).
   ColormapEffect.max_layers(5);
 
+  // Set up personal settings.
+  settingsAddr = EEPROMSettings.requestSlice(sizeof(Settings));
+  EEPROMSettings.seal();
+  EEPROM.get(settingsAddr, Settings);
+
   // MouseKey settings for sanity.
   MouseKeys.setSpeedLimit(70);
   MouseKeys.speed = 15;
@@ -536,8 +572,17 @@ void setup() {
   LEDBreatheEffect.hue = 140;
   LEDBreatheEffect.saturation = 150;
 
-  // Default to LED effect on startup... not using a low-power device.
-  LEDRainbowWaveEffect.activate();
+  // Select the previously used LED effect
+  switch (Settings.lastEffect) {
+    case FX_OFF: LEDOff.activate(); break;
+    case FX_RAINBOW: LEDRainbowEffect.activate(); break;
+    case FX_RAINBOWWAVE: LEDRainbowWaveEffect.activate(); break;
+    case FX_BREATHE: LEDBreatheEffect.activate(); break;
+    case FX_MIAMI: MiamiEffect.activate(); break;
+    case FX_FIRE: FireEffect.activate(); break;
+    case FX_WAVEPOOL: FireEffect.activate(); break;
+    default: LEDOff.activate(); Settings.lastEffect = 0; break;
+  }
 }
 
 /** loop is the second of the standard Arduino sketch functions.
