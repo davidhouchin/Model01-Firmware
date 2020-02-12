@@ -1,3 +1,8 @@
+My personal branch of the Model-01 Firmware.  
+Please note that this expects the Fire and WavePool effects to be in the same directory. Cloning to the project folder is enough.  
+https://github.com/kevinr/Kaleidoscope-LED-Fire  
+https://github.com/ToyKeeper/Kaleidoscope-LED-Wavepool  
+
 # Keyboardio Model 01 Firmware
 
 _The default firmware for the Keyboardio Model 01_
