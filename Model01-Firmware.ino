@@ -3,7 +3,7 @@
 // See "LICENSE" for license details
 
 #ifndef BUILD_INFORMATION
-#define BUILD_INFORMATION "taiishal v7"
+#define BUILD_INFORMATION "taiishal v8"
 #endif
 
 
@@ -232,26 +232,6 @@ static void versionInfoMacro(uint8_t keyState) {
   }
 }
 
-/** anyKeyMacro is used to provide the functionality of the 'Any' key.
- *
- * When the 'any key' macro is toggled on, a random alphanumeric key is
- * selected. While the key is held, the function generates a synthetic
- * keypress event repeating that randomly selected key.
- *
- */
-
-static void anyKeyMacro(uint8_t keyState) {
-  static Key lastKey;
-  bool toggledOn = false;
-  if (keyToggledOn(keyState)) {
-    lastKey.setKeyCode(Key_A.getKeyCode() + (uint8_t)(millis() % 36));
-    toggledOn = true;
-  }
-
-  if (keyIsPressed(keyState))
-    Kaleidoscope.hid().keyboard().pressKey(lastKey, toggledOn);
-}
-
 
 /** macroAction dispatches keymap events that are tied to a macro
     to that macro. It takes two uint8_t parameters.
@@ -270,10 +250,6 @@ const macro_t *macroAction(uint8_t macroIndex, uint8_t keyState) {
 
   case MACRO_VERSION_INFO:
     versionInfoMacro(keyState);
-    break;
-
-  case MACRO_ANY:
-    anyKeyMacro(keyState);
     break;
   }
   return MACRO_NONE;
@@ -427,6 +403,14 @@ public:
       if (Layer.top() == PRIMARY) {
         LEDRainbowWaveEffect.brightness(rainbowBrightness);
         LEDRainbowEffect.brightness(rainbowBrightness);
+
+        // If the LEDs are supposed to normally be off, we need
+        // to reactivate the OFF effect, otherwise they stay on as
+        // there is no active effect to overwrite them. There might
+        // be a better way to solve that.
+        if (Settings.lastEffect == 0) {
+          LEDOff.activate();
+        }
       }
     }
     return kaleidoscope::EventHandlerResult::OK;
@@ -559,6 +543,7 @@ void setup() {
   ColormapEffect.max_layers(5);
 
   // Set up personal settings.
+  // There are no protections at the moment for if the settings structure changes.
   settingsAddr = EEPROMSettings.requestSlice(sizeof(Settings));
   EEPROMSettings.seal();
   EEPROM.get(settingsAddr, Settings);
@@ -580,7 +565,7 @@ void setup() {
     case FX_BREATHE: LEDBreatheEffect.activate(); break;
     case FX_MIAMI: MiamiEffect.activate(); break;
     case FX_FIRE: FireEffect.activate(); break;
-    case FX_WAVEPOOL: FireEffect.activate(); break;
+    case FX_WAVEPOOL: WavepoolEffect.activate(); break;
     default: LEDOff.activate(); Settings.lastEffect = 0; break;
   }
 }
