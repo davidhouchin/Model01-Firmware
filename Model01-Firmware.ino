@@ -3,7 +3,7 @@
 // See "LICENSE" for license details
 
 #ifndef BUILD_INFORMATION
-#define BUILD_INFORMATION "taiishal v8"
+#define BUILD_INFORMATION "taiishal v9"
 #endif
 
 
@@ -214,6 +214,7 @@ KEYMAPS(
 static uint16_t settingsAddr;
 static struct {
   byte lastEffect;
+  byte breatheHue;
 } Settings;
 
 // Savable LED effects. FX_NUM should contain the total number of effects.
@@ -312,6 +313,7 @@ static void enterHardwareTestMode(uint8_t combo_index) {
   HardwareTestMode.runTests();
 }
 
+// Save the selected LEDEffect to EEPROM
 static void saveLastEffect(uint8_t combo_index) {
   Settings.lastEffect++;
   if (Settings.lastEffect == FX_NUM) {
@@ -320,6 +322,15 @@ static void saveLastEffect(uint8_t combo_index) {
   EEPROM.put(settingsAddr, Settings);
 }
 
+// Shift Breathe Hue and save to EEPROM
+static void updateBreatheHue(uint8_t combo_index) {
+  Settings.breatheHue++;
+  if (Settings.breatheHue == 15) {
+    Settings.breatheHue = 0;
+  }
+  EEPROM.put(settingsAddr, Settings);
+  LEDBreatheEffect.hue = Settings.breatheHue * 20;
+}
 
 /** Magic combo list, a list of key combo and action pairs the firmware should
  * recognise.
@@ -333,8 +344,13 @@ USE_MAGIC_COMBOS({.action = toggleKeyboardProtocol,
   .keys = { R3C6, R0C0, R0C6 }
 }, {
   .action = saveLastEffect,
+  // LED
   .keys = { R0C6 }
-} );
+}, {
+  .action = updateBreatheHue,
+  // Left Shift + Butterfly
+  .keys = { R3C8, R2C9 }
+});
 
 // Layer Coloring
 
@@ -354,6 +370,7 @@ const cRGB mapColors[4] = {
   CRGB(0, 0, 255)  // Blue
 };
 
+// T represents a "transparent" color, so not modified
 static const byte T = 255;
 
 static const byte functionColors [rows][cols] PROGMEM {
@@ -553,10 +570,6 @@ void setup() {
   MouseKeys.speed = 15;
   MouseKeys.accelDelay = 100;
 
-  // Set LEDBreath color.
-  LEDBreatheEffect.hue = 140;
-  LEDBreatheEffect.saturation = 150;
-
   // Select the previously used LED effect
   switch (Settings.lastEffect) {
     case FX_OFF: LEDOff.activate(); break;
@@ -568,6 +581,10 @@ void setup() {
     case FX_WAVEPOOL: WavepoolEffect.activate(); break;
     default: LEDOff.activate(); Settings.lastEffect = 0; break;
   }
+  
+  // Set LEDBreathe color.
+  LEDBreatheEffect.hue = Settings.breatheHue * 20;
+  LEDBreatheEffect.saturation = 150;
 }
 
 /** loop is the second of the standard Arduino sketch functions.
