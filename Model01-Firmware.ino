@@ -3,7 +3,7 @@
 // See "LICENSE" for license details
 
 #ifndef BUILD_INFORMATION
-#define BUILD_INFORMATION "taiishal v9"
+#define BUILD_INFORMATION "strikekat v10"
 #endif
 
 
@@ -63,10 +63,9 @@
 // Support for USB quirks, like changing the key state report protocol
 #include "Kaleidoscope-USB-Quirks.h"
 
-// Custom includes
-#include "Kaleidoscope-LEDEffects.h"
-#include "Kaleidoscope-LED-Wavepool.h"
-#include "Kaleidoscope-LED-Fire.h"
+// Custom Includes
+#include "Kaleidoscope-IdleLEDs.h"
+
 
 /** This 'enum' is a list of all the macros used by the Model 01's firmware
   * The names aren't particularly important. What is important is that each
@@ -146,7 +145,7 @@ enum { PRIMARY, NUMPAD, GAME, FUNCTION }; // layers
 KEYMAPS(
 
   [PRIMARY] = KEYMAP_STACKED
-  (___,          Key_1, Key_2, Key_3, Key_4, Key_5, Key_LEDEffectNext,
+  (___,          Key_1, Key_2, Key_3, Key_4, Key_5, ___,
    Key_Backtick, Key_Q, Key_W, Key_E, Key_R, Key_T, Key_Tab,
    Key_PageUp,   Key_A, Key_S, Key_D, Key_F, Key_G,
    Key_PageDown, Key_Z, Key_X, Key_C, Key_V, Key_B, Key_Escape,
@@ -218,7 +217,7 @@ static struct {
 } Settings;
 
 // Savable LED effects. FX_NUM should contain the total number of effects.
-enum { FX_OFF, FX_RAINBOW, FX_RAINBOWWAVE, FX_BREATHE, FX_MIAMI, FX_FIRE, FX_WAVEPOOL, FX_NUM = 7 };
+enum { FX_OFF, FX_RAINBOW, FX_RAINBOWWAVE, FX_BREATHE, FX_NUM = 4 };
 
 
 /** versionInfoMacro handles the 'firmware version info' macro
@@ -313,8 +312,9 @@ static void enterHardwareTestMode(uint8_t combo_index) {
   HardwareTestMode.runTests();
 }
 
-// Save the selected LEDEffect to EEPROM
-static void saveLastEffect(uint8_t combo_index) {
+// Cycle and save the selected LEDEffect to EEPROM
+static void cycleLEDEffect(uint8_t combo_index) {
+  LEDControl.next_mode();
   Settings.lastEffect++;
   if (Settings.lastEffect == FX_NUM) {
     Settings.lastEffect = 0;
@@ -343,12 +343,12 @@ USE_MAGIC_COMBOS({.action = toggleKeyboardProtocol,
   // Left Fn + Prog + LED
   .keys = { R3C6, R0C0, R0C6 }
 }, {
-  .action = saveLastEffect,
-  // LED
-  .keys = { R0C6 }
+  .action = cycleLEDEffect,
+  // Left SHift + LED
+  .keys = { R3C7, R0C6 }
 }, {
   .action = updateBreatheHue,
-  // Left Shift + Butterfly
+  // Right Shift + Butterfly
   .keys = { R3C8, R2C9 }
 });
 
@@ -361,6 +361,13 @@ static const byte cols = Kaleidoscope.device().matrix_columns;
 // Default and dimmed rainbow LED effects brightness (out of 255):
 static const byte rainbowBrightness = 150;
 static const byte rainbowBrightnessDimmed = 85;
+
+/*
+  {PRG, 1,2,3,4,5,LED,     CTRL, CTRL,    ANY,  6,7,8,9,0,NUM},
+  {`,   Q,W,E,R,T,TAB,     BKSP, SPACE,   ENTER,Y,U,I,O,P,=},
+  {PGUP,A,S,D,F,G,ESC,     CMD,  ALT,     BFLY, H,J,K,L,;,'},
+  {PGDN,Z,X,C,V,B,      FN,SHIFT,SHIFT,FN,       N,M,,,.,/,-}
+*/
 
 // https://community.keyboard.io/t/turning-on-specific-leds-when-hitting-a-specific-layer/703/31
 const cRGB mapColors[4] = {
@@ -403,7 +410,7 @@ public:
   }
 
   kaleidoscope::EventHandlerResult afterEachCycle() {
-    if (Layer.top() == colorLayer) {
+    if (Layer.mostRecent() == colorLayer) {
       LEDRainbowWaveEffect.brightness(rainbowBrightnessDimmed);
       LEDRainbowEffect.brightness(rainbowBrightnessDimmed);
       
@@ -417,7 +424,7 @@ public:
       }
 
     } else {
-      if (Layer.top() == PRIMARY) {
+      if (Layer.mostRecent() == PRIMARY) {
         LEDRainbowWaveEffect.brightness(rainbowBrightness);
         LEDRainbowEffect.brightness(rainbowBrightness);
 
@@ -485,11 +492,6 @@ KALEIDOSCOPE_INIT_PLUGINS(
   // The breathe effect slowly pulses all of the LEDs on your keyboard
   LEDBreatheEffect,
 
-  // More effects (Warning - JukeboxEffect caused my keyboard's LEDs to jitter and become unresponsive!)
-  MiamiEffect,
-  FireEffect,
-  WavepoolEffect,
-
   // The LED Palette Theme plugin provides a shared palette for other plugins,
   // like Colormap below
   LEDPaletteTheme,
@@ -524,7 +526,10 @@ KALEIDOSCOPE_INIT_PLUGINS(
 
   // Override colors for certain layers.
   FunctionLayerColor,
-  GameLayerColor
+  GameLayerColor,
+
+  // Turn off LEDs after inactivity
+  IdleLEDs
 );
 
 /** The 'setup' function is one of the two standard Arduino sketch functions.
@@ -566,9 +571,9 @@ void setup() {
   EEPROM.get(settingsAddr, Settings);
 
   // MouseKey settings for sanity.
-  MouseKeys.setSpeedLimit(70);
+  MouseKeys.setSpeedLimit(60);
   MouseKeys.speed = 15;
-  MouseKeys.accelDelay = 100;
+  MouseKeys.accelDelay = 20;
 
   // Select the previously used LED effect
   switch (Settings.lastEffect) {
@@ -576,9 +581,6 @@ void setup() {
     case FX_RAINBOW: LEDRainbowEffect.activate(); break;
     case FX_RAINBOWWAVE: LEDRainbowWaveEffect.activate(); break;
     case FX_BREATHE: LEDBreatheEffect.activate(); break;
-    case FX_MIAMI: MiamiEffect.activate(); break;
-    case FX_FIRE: FireEffect.activate(); break;
-    case FX_WAVEPOOL: WavepoolEffect.activate(); break;
     default: LEDOff.activate(); Settings.lastEffect = 0; break;
   }
   
